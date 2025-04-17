@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "VisualStudioCodeWorkspaceExtension (Package)": {
+      "commandName": "MsixPackage",
+      "doNotLaunchApp": true
+    },
+    "VisualStudioCodeWorkspaceExtension (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
