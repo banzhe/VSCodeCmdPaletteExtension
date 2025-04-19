@@ -27,7 +27,7 @@ internal sealed partial class VisualStudioCodeWorkspaceExtensionPage : ListPage
 
         return [
             .. _workspacesApi.Workspaces
-                .Select(x => new ListItem(new NoOpCommand()) { Title = x.FolderName })
+                .Select(x => new ListItem(new VsCodeCommand(x)){Title = x.FolderName, Icon = x.VSCodeInstance.WorkspaceIconInfo})
         ];
     }
 }

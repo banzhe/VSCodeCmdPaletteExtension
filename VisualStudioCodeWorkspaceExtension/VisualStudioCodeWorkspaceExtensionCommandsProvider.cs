@@ -10,7 +10,6 @@ namespace VisualStudioCodeWorkspaceExtension;
 public partial class VisualStudioCodeWorkspaceExtensionCommandsProvider : CommandProvider
 {
     private readonly ICommandItem[] _commands;
-
     public VisualStudioCodeWorkspaceExtensionCommandsProvider()
     {
         DisplayName = "Visual Studio Code Workspace";

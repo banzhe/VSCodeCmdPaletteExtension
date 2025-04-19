@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
+using Microsoft.CommandPalette.Extensions.Toolkit;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.Storage;
 
@@ -24,109 +25,153 @@ namespace VisualStudioCodeWorkspaceExtension.VSCodeHelper
             return bitmapImage;
         }
 
-        private static async Task<BitmapImage> OverlayImages(BitmapImage baseImage, BitmapImage overlayImage)
+        private static void DoLoadVsCodeInstance(string path)
         {
-            // For now, we'll just return the base image as the overlay functionality
-            // would require more complex pixel manipulation that's better handled
-            // by a dedicated image processing library
-            return baseImage;
+            var files = Directory.GetFiles(path)
+                .Select(x => Path.GetFileName(x))
+                .Where(x => (x.Contains("code", StringComparison.OrdinalIgnoreCase) || x.Contains("codium", StringComparison.OrdinalIgnoreCase))
+                    && !x.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase)).ToArray();
+
+            // Remove the trailing backslash to always get the correct path
+            var iconPath = Path.GetDirectoryName(path.TrimEnd('\\'));
+
+            if (files.Length == 0)
+            {
+                return;
+            }
+
+            var file = files[0];
+            var version = string.Empty;
+
+            var instance = new VSCodeInstance
+            {
+                ExecutablePath = file,
+            };
+
+            if (file.EndsWith("code", StringComparison.OrdinalIgnoreCase))
+            {
+                version = "Code";
+                instance.VSCodeVersion = VSCodeVersion.Stable;
+            }
+            else if (file.EndsWith("code-insiders", StringComparison.OrdinalIgnoreCase))
+            {
+                version = "Code - Insiders";
+                instance.VSCodeVersion = VSCodeVersion.Insiders;
+            }
+            else if (file.EndsWith("code-exploration", StringComparison.OrdinalIgnoreCase))
+            {
+                version = "Code - Exploration";
+                instance.VSCodeVersion = VSCodeVersion.Exploration;
+            }
+            else if (file.EndsWith("codium", StringComparison.OrdinalIgnoreCase))
+            {
+                version = "VSCodium";
+                instance.VSCodeVersion = VSCodeVersion.Stable;
+            }
+            else if (file.EndsWith("codium-insiders", StringComparison.OrdinalIgnoreCase))
+            {
+                version = "VSCodium - Insiders";
+                instance.VSCodeVersion = VSCodeVersion.Insiders;
+            }
+
+            if (string.IsNullOrEmpty(version))
+            {
+                return;
+            }
+
+            var portableData = Path.Join(iconPath, "data");
+            instance.AppData = Directory.Exists(portableData) ? Path.Join(portableData, "user-data") : Path.Combine(_userAppDataPath, version);
+            var vsCodeIconPath = Path.Join(iconPath, $"{version}.exe");
+            if (!File.Exists(vsCodeIconPath))
+            {
+                return;
+            }
+
+            instance.WorkspaceIconInfo = IconHelpers.FromRelativePath(vsCodeIconPath);
+
+            Instances.Add(instance);
         }
 
+        private static void DoLoadCursorInstance(string path)
+        {
+            var files = Directory.GetFiles(path)
+                .Select(x => Path.GetFileName(x))
+                .Where(x => x.Contains("cursor", StringComparison.OrdinalIgnoreCase)
+                    && !x.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase)).ToArray();
+
+            // Remove the trailing backslash to always get the correct path
+            var iconPath = Path.GetDirectoryName(path.TrimEnd('\\'));
+
+            if (files.Length == 0)
+            {
+                return;
+            }
+
+            var file = files[0];
+            var version = string.Empty;
+
+            var instance = new VSCodeInstance
+            {
+                ExecutablePath = file,
+            };
+
+            if (file.EndsWith("cursor", StringComparison.OrdinalIgnoreCase))
+            {
+                version = "Cursor";
+                instance.VSCodeVersion = VSCodeVersion.Cursor;
+            }
+
+            if (string.IsNullOrEmpty(version))
+            {
+                return;
+            }
+
+            var portableData = Path.Join(iconPath, "data");
+            instance.AppData = Directory.Exists(portableData) ? Path.Join(portableData, "user-data") : Path.Combine(_userAppDataPath, version);
+            var vsCodeIconPath = Path.Join(iconPath, "..", "..", $"{version}.exe");
+            if (!File.Exists(vsCodeIconPath))
+            {
+                return;
+            }
+
+            instance.WorkspaceIconInfo = IconHelpers.FromRelativePath(vsCodeIconPath);
+
+            Instances.Add(instance);
+        }
+
+
         // Gets the executablePath and AppData foreach instance of VSCode
-        public static async Task LoadVSCodeInstances()
+        public static void LoadVSCodeInstances()
         {
             var environmentPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.User) ?? string.Empty;
             environmentPath += (environmentPath.Length > 0 && environmentPath.EndsWith(';') ? string.Empty : ";") + Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+            Debug.WriteLine(environmentPath);
             var paths = environmentPath
                 .Split(';')
-                .Distinct()
+                .Distinct(StringComparer.OrdinalIgnoreCase)
                 .Where(x => x.Contains("VS Code", StringComparison.OrdinalIgnoreCase)
                     || x.Contains("VSCodium", StringComparison.OrdinalIgnoreCase)
-                    || x.Contains("vscode", StringComparison.OrdinalIgnoreCase)).ToArray();
+                    || x.Contains("vscode", StringComparison.OrdinalIgnoreCase)
+                    || x.Contains("cursor", StringComparison.OrdinalIgnoreCase)
+                    ).ToArray();
+
 
             foreach (var path in paths)
             {
+                Debug.WriteLine(path);
                 if (!Directory.Exists(path))
                 {
                     continue;
                 }
 
-                var files = Directory.GetFiles(path)
-                    .Where(x => (x.Contains("code", StringComparison.OrdinalIgnoreCase) || x.Contains("codium", StringComparison.OrdinalIgnoreCase))
-                        && !x.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase)).ToArray();
-
-                // Remove the trailing backslash to always get the correct path
-                var iconPath = Path.GetDirectoryName(path.TrimEnd('\\'));
-
-                if (files.Length == 0)
+                if (path.Contains("cursor", StringComparison.OrdinalIgnoreCase))
                 {
-                    continue;
+                    DoLoadCursorInstance(path);
                 }
-
-                var file = files[0];
-                var version = string.Empty;
-
-                var instance = new VSCodeInstance
+                else
                 {
-                    ExecutablePath = file,
-                };
-
-                if (file.EndsWith("code", StringComparison.OrdinalIgnoreCase))
-                {
-                    version = "Code";
-                    instance.VSCodeVersion = VSCodeVersion.Stable;
+                    DoLoadVsCodeInstance(path);
                 }
-                else if (file.EndsWith("code-insiders", StringComparison.OrdinalIgnoreCase))
-                {
-                    version = "Code - Insiders";
-                    instance.VSCodeVersion = VSCodeVersion.Insiders;
-                }
-                else if (file.EndsWith("code-exploration", StringComparison.OrdinalIgnoreCase))
-                {
-                    version = "Code - Exploration";
-                    instance.VSCodeVersion = VSCodeVersion.Exploration;
-                }
-                else if (file.EndsWith("codium", StringComparison.OrdinalIgnoreCase))
-                {
-                    version = "VSCodium";
-                    instance.VSCodeVersion = VSCodeVersion.Stable;
-                }
-                else if (file.EndsWith("codium-insiders", StringComparison.OrdinalIgnoreCase))
-                {
-                    version = "VSCodium - Insiders";
-                    instance.VSCodeVersion = VSCodeVersion.Insiders;
-                }
-
-                if (string.IsNullOrEmpty(version))
-                {
-                    continue;
-                }
-
-                var portableData = Path.Join(iconPath, "data");
-                instance.AppData = Directory.Exists(portableData) ? Path.Join(portableData, "user-data") : Path.Combine(_userAppDataPath, version);
-                var vsCodeIconPath = Path.Join(iconPath, $"{version}.exe");
-                if (!File.Exists(vsCodeIconPath))
-                {
-                    continue;
-                }
-
-                /* var vsCodeIcon = await LoadBitmapImageFromFile(vsCodeIconPath);
-                if (vsCodeIcon == null)
-                {
-                    continue;
-                }
-
-                // Workspace
-                var folderIconPath = Path.Join(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "Images//folder.png");
-                var folderIcon = await LoadBitmapImageFromFile(folderIconPath);
-                instance.WorkspaceIconBitMap = await OverlayImages(folderIcon, vsCodeIcon);
-
-                // Remote
-                var monitorIconPath = Path.Join(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "Images//monitor.png");
-                var monitorIcon = await LoadBitmapImageFromFile(monitorIconPath);
-                instance.RemoteIconBitMap = await OverlayImages(monitorIcon, vsCodeIcon); */
-
-                Instances.Add(instance);
             }
 
             Console.WriteLine($"Loaded {Instances.Count} VSCode instances");

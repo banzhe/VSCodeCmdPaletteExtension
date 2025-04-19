@@ -2,6 +2,7 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.CommandPalette.Extensions.Toolkit;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 
@@ -12,6 +13,7 @@ namespace VisualStudioCodeWorkspaceExtension.VSCodeHelper
         Stable = 1,
         Insiders = 2,
         Exploration = 3,
+        Cursor = 4,
     }
 
     public class VSCodeInstance
@@ -22,12 +24,6 @@ namespace VisualStudioCodeWorkspaceExtension.VSCodeHelper
 
         public string AppData { get; set; } = string.Empty;
 
-        public ImageSource WorkspaceIcon() => WorkspaceIconBitMap;
-
-        public ImageSource RemoteIcon() => RemoteIconBitMap;
-
-        public BitmapImage WorkspaceIconBitMap { get; set; }
-
-        public BitmapImage RemoteIconBitMap { get; set; }
+        public IconInfo WorkspaceIconInfo { get; set; }
     }
 }
