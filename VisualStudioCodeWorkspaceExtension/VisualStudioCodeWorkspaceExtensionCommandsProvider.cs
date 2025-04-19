@@ -13,9 +13,11 @@ public partial class VisualStudioCodeWorkspaceExtensionCommandsProvider : Comman
     public VisualStudioCodeWorkspaceExtensionCommandsProvider()
     {
         DisplayName = "Visual Studio Code Workspace";
-        Icon = IconHelpers.FromRelativePath("Assets\\StoreLogo.png");
         _commands = [
-            new CommandItem(new VisualStudioCodeWorkspaceExtensionPage()) { Title = DisplayName },
+            new CommandItem(new VisualStudioCodeWorkspaceExtensionPage()) {
+                Title = DisplayName,
+                Icon = IconHelpers.FromRelativePath("Assets\\file-scan.svg"),
+            },
         ];
     }
 
